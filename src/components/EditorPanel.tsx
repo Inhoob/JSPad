@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import { EditorState } from '@codemirror/state';
 
 interface EditorPanelProps {
@@ -13,6 +13,28 @@ interface EditorPanelProps {
 export function EditorPanel({ code, onChange, onScroll }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const onChangeRef = useRef(onChange);
+  const onScrollRef = useRef(onScroll);
+
+  // Keep refs up to date
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onScrollRef.current = onScroll;
+  }, [onChange, onScroll]);
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (viewRef.current && e.target === editorRef.current) {
+      // Click was on the container, not on the editor content
+      const doc = viewRef.current.state.doc;
+      const lastPos = doc.length;
+
+      viewRef.current.dispatch({
+        selection: { anchor: lastPos, head: lastPos },
+        scrollIntoView: true,
+      });
+      viewRef.current.focus();
+    }
+  };
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -22,16 +44,16 @@ export function EditorPanel({ code, onChange, onScroll }: EditorPanelProps) {
       extensions: [
         basicSetup,
         javascript(),
-        oneDark,
+        vscodeDark,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString());
+            onChangeRef.current(update.state.doc.toString());
           }
         }),
         EditorView.domEventHandlers({
           scroll: (_event, view) => {
-            if (onScroll) {
-              onScroll(view.scrollDOM.scrollTop);
+            if (onScrollRef.current) {
+              onScrollRef.current(view.scrollDOM.scrollTop);
             }
           },
         }),
@@ -45,28 +67,20 @@ export function EditorPanel({ code, onChange, onScroll }: EditorPanelProps) {
 
     viewRef.current = view;
 
+    // Auto-focus when editor is mounted
+    view.focus();
+
     return () => {
       view.destroy();
     };
   }, []);
-
-  useEffect(() => {
-    if (viewRef.current && viewRef.current.state.doc.toString() !== code) {
-      viewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: viewRef.current.state.doc.length,
-          insert: code,
-        },
-      });
-    }
-  }, [code]);
 
   return (
     <div
       ref={editorRef}
       className="w-full h-full overflow-auto"
       style={{ fontSize: '14px' }}
+      onClick={handleContainerClick}
     />
   );
 }

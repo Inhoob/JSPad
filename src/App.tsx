@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { TopBar } from './components/TopBar';
 import { TabBar } from './components/TabBar';
 import { EditorPanel } from './components/EditorPanel';
 import { ConsolePanel } from './components/ConsolePanel';
@@ -44,6 +43,7 @@ function App() {
 
   const handleCodeChange = useCallback(
     (code: string) => {
+      console.log('[DEBUG App] Code changed:', code.substring(0, 30));
       updateTabCode(activeTabId, code);
     },
     [activeTabId, updateTabCode]
@@ -108,12 +108,6 @@ function App() {
 
   return (
     <div className="w-full h-full bg-dark-bg flex flex-col">
-      <TopBar
-        autoExecute={settings.autoExecute}
-        onRun={executeCode}
-        onSettings={() => setIsSettingsOpen(true)}
-      />
-
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -123,12 +117,16 @@ function App() {
         onTabCreate={createTab}
         onTabRename={updateTabName}
         onTabReorder={reorderTabs}
+        onSettings={() => setIsSettingsOpen(true)}
+        autoExecute={settings.autoExecute}
+        onRun={executeCode}
       />
 
       <div className="flex-1 overflow-hidden">
         <PanelGroup direction="horizontal">
           <Panel defaultSize={settings.splitRatio} minSize={20} maxSize={80}>
             <EditorPanel
+              key={activeTabId}
               code={activeTab.code}
               onChange={handleCodeChange}
             />

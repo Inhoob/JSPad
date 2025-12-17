@@ -18,6 +18,8 @@ export function useCodeExecution({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const executeCode = useCallback(() => {
+    console.log('[DEBUG] executeCode called with code:', code.substring(0, 50));
+
     if (workerRef.current) {
       workerRef.current.terminate();
     }
@@ -28,11 +30,21 @@ export function useCodeExecution({
     );
 
     workerRef.current.onmessage = (event) => {
+      console.log('[DEBUG] Worker message received:', event.data);
       if (event.data.type === 'complete') {
         onOutput(event.data.logs);
       }
     };
 
+    workerRef.current.onerror = (error) => {
+      console.error('[DEBUG] Worker error:', error);
+      onOutput([{
+        type: 'error',
+        content: `Worker error: ${error.message}`,
+      }]);
+    };
+
+    console.log('[DEBUG] Posting message to worker');
     workerRef.current.postMessage({
       type: 'execute',
       code,
@@ -49,7 +61,7 @@ export function useCodeExecution({
 
     timeoutRef.current = setTimeout(() => {
       executeCode();
-    }, 1500);
+    }, 500);
 
     return () => {
       if (timeoutRef.current) {

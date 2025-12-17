@@ -23,68 +23,84 @@ export function useTabs() {
   const activeTab = tabs.find(tab => tab.id === activeTabId) || tabs[0];
 
   const createTab = useCallback(() => {
-    if (tabs.length >= MAX_TABS) return;
+    setTabs((currentTabs) => {
+      if (currentTabs.length >= MAX_TABS) return currentTabs;
 
-    const untitledCount = tabs.filter(t => t.name.startsWith('Untitled')).length;
-    const newTab: Tab = {
-      id: nanoid(),
-      name: `Untitled ${untitledCount + 1}`,
-      code: '',
-      consoleOutput: [],
-    };
+      const untitledCount = currentTabs.filter(t => t.name.startsWith('Untitled')).length;
+      const newTab: Tab = {
+        id: nanoid(),
+        name: `Untitled ${untitledCount + 1}`,
+        code: '',
+        consoleOutput: [],
+      };
 
-    setTabs([...tabs, newTab]);
-    setActiveTabId(newTab.id);
-  }, [tabs, setTabs, setActiveTabId]);
+      setActiveTabId(newTab.id);
+      return [...currentTabs, newTab];
+    });
+  }, [setTabs, setActiveTabId]);
 
   const closeTab = useCallback((tabId: string) => {
-    if (tabs.length === 1) {
-      // Quit app logic handled by parent
-      return 'quit-app';
-    }
+    let result: 'quit-app' | 'closed' = 'closed';
 
-    const tabIndex = tabs.findIndex(t => t.id === tabId);
-    const newTabs = tabs.filter(t => t.id !== tabId);
-    setTabs(newTabs);
+    setTabs((currentTabs) => {
+      if (currentTabs.length === 1) {
+        // Quit app logic handled by parent
+        result = 'quit-app';
+        return currentTabs;
+      }
 
-    if (activeTabId === tabId) {
-      const nextIndex = Math.min(tabIndex, newTabs.length - 1);
-      setActiveTabId(newTabs[nextIndex].id);
-    }
+      const tabIndex = currentTabs.findIndex(t => t.id === tabId);
+      const newTabs = currentTabs.filter(t => t.id !== tabId);
 
-    return 'closed';
-  }, [tabs, activeTabId, setTabs, setActiveTabId]);
+      if (activeTabId === tabId) {
+        const nextIndex = Math.min(tabIndex, newTabs.length - 1);
+        setActiveTabId(newTabs[nextIndex].id);
+      }
+
+      return newTabs;
+    });
+
+    return result;
+  }, [activeTabId, setTabs, setActiveTabId]);
 
   const updateTabName = useCallback((tabId: string, name: string) => {
-    setTabs(tabs.map(tab =>
-      tab.id === tabId
-        ? { ...tab, name: name.trim() || `Untitled ${tabs.indexOf(tab) + 1}` }
-        : tab
-    ));
-  }, [tabs, setTabs]);
+    setTabs((currentTabs) =>
+      currentTabs.map((tab, index) =>
+        tab.id === tabId
+          ? { ...tab, name: name.trim() || `Untitled ${index + 1}` }
+          : tab
+      )
+    );
+  }, [setTabs]);
 
   const updateTabCode = useCallback((tabId: string, code: string) => {
-    setTabs(tabs.map(tab =>
-      tab.id === tabId ? { ...tab, code } : tab
-    ));
-  }, [tabs, setTabs]);
+    setTabs((currentTabs) =>
+      currentTabs.map(tab =>
+        tab.id === tabId ? { ...tab, code } : tab
+      )
+    );
+  }, [setTabs]);
 
   const updateTabConsole = useCallback((tabId: string, consoleOutput: any[]) => {
-    setTabs(tabs.map(tab =>
-      tab.id === tabId ? { ...tab, consoleOutput } : tab
-    ));
-  }, [tabs, setTabs]);
+    setTabs((currentTabs) =>
+      currentTabs.map(tab =>
+        tab.id === tabId ? { ...tab, consoleOutput } : tab
+      )
+    );
+  }, [setTabs]);
 
   const switchToTab = useCallback((tabId: string) => {
     setActiveTabId(tabId);
   }, [setActiveTabId]);
 
   const reorderTabs = useCallback((fromIndex: number, toIndex: number) => {
-    const newTabs = [...tabs];
-    const [removed] = newTabs.splice(fromIndex, 1);
-    newTabs.splice(toIndex, 0, removed);
-    setTabs(newTabs);
-  }, [tabs, setTabs]);
+    setTabs((currentTabs) => {
+      const newTabs = [...currentTabs];
+      const [removed] = newTabs.splice(fromIndex, 1);
+      newTabs.splice(toIndex, 0, removed);
+      return newTabs;
+    });
+  }, [setTabs]);
 
   return {
     tabs,

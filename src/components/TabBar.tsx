@@ -10,6 +10,9 @@ interface TabBarProps {
   onTabCreate: () => void;
   onTabRename: (tabId: string, name: string) => void;
   onTabReorder: (fromIndex: number, toIndex: number) => void;
+  onSettings: () => void;
+  autoExecute?: boolean;
+  onRun?: () => void;
 }
 
 export function TabBar({
@@ -20,6 +23,9 @@ export function TabBar({
   onTabClose,
   onTabCreate,
   onTabRename,
+  onSettings,
+  autoExecute = true,
+  onRun,
 }: TabBarProps) {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -109,6 +115,24 @@ export function TabBar({
         title={canCreateTab ? 'New tab (Cmd+T)' : 'Maximum 10 tabs'}
       >
         +
+      </button>
+
+      {!autoExecute && onRun && (
+        <button
+          onClick={onRun}
+          className="h-8 px-3 rounded flex items-center justify-center text-sm bg-blue-600 hover:bg-blue-700 text-white ml-auto mr-1"
+          title="Run code (Cmd+Enter)"
+        >
+          ▶ Run
+        </button>
+      )}
+
+      <button
+        onClick={onSettings}
+        className={`h-8 w-8 rounded flex items-center justify-center text-gray-400 hover:bg-dark-hover hover:text-dark-text ${autoExecute ? 'ml-auto' : ''}`}
+        title="Settings (Cmd+,)"
+      >
+        ⚙
       </button>
     </div>
   );

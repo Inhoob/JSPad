@@ -32,20 +32,16 @@ export function ConsolePanel({ output, onScroll }: ConsolePanelProps) {
       className="w-full h-full overflow-auto bg-dark-bg p-4 font-mono text-sm"
       onScroll={handleScroll}
     >
-      {output.length === 0 ? (
-        <div className="text-gray-500 italic">Console output will appear here...</div>
-      ) : (
-        <div className="space-y-1">
-          {output.map((msg, index) => (
-            <div
-              key={index}
-              className={`${getTextColor(msg.type)} whitespace-pre-wrap`}
-            >
-              {msg.content}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="space-y-1">
+        {output.map((msg, index) => (
+          <div
+            key={index}
+            className={`${getTextColor(msg.type)} whitespace-pre-wrap`}
+          >
+            {msg.content}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

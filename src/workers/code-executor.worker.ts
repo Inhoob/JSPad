@@ -10,39 +10,36 @@ interface TerminateMessage {
 
 type WorkerMessage = ExecuteMessage | TerminateMessage;
 
-interface OutputMessage {
+interface ConsoleMessage {
   type: 'log' | 'error' | 'warn';
-  line: number;
-  content: any;
+  content: string;
 }
 
-const logCache: OutputMessage[] = [];
-let executionTimeout: number | null = null;
+const MAX_LOGS = 1000;
+let logs: ConsoleMessage[] = [];
 
 // Override console methods
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+const originalSetTimeout = self.setTimeout.bind(self);
+const originalSetInterval = self.setInterval.bind(self);
+const originalClearTimeout = self.clearTimeout.bind(self);
+const originalClearInterval = self.clearInterval.bind(self);
 
-function getLineNumber(): number {
-  try {
-    const stack = new Error().stack;
-    if (!stack) return 0;
-
-    const lines = stack.split('\n');
-    // Find the line that contains 'eval' which is our executed code
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes('eval')) {
-        const match = lines[i].match(/:(\d+):/);
-        if (match) {
-          return parseInt(match[1], 10);
-        }
-      }
-    }
-    return 0;
-  } catch {
-    return 0;
-  }
-}
+let pendingTimers = new Set<number>();
 
 console.log = (...args: any[]) => {
+  if (logs.length >= MAX_LOGS) {
+    if (logs.length === MAX_LOGS) {
+      logs.push({
+        type: 'warn',
+        content: `⚠️ Log limit reached (${MAX_LOGS} lines). Further logs will be ignored.`,
+      });
+    }
+    return;
+  }
+
   const content = args.map(arg => {
     if (typeof arg === 'object') {
       try {
@@ -54,70 +51,143 @@ console.log = (...args: any[]) => {
     return String(arg);
   }).join(' ');
 
-  logCache.push({
-    type: 'log',
-    line: getLineNumber(),
-    content,
-  });
+  logs.push({ type: 'log', content });
+  originalConsoleLog('[User Code]', content);
 };
 
 console.error = (...args: any[]) => {
+  if (logs.length >= MAX_LOGS + 1) return;
+
   const content = args.map(arg => String(arg)).join(' ');
-  logCache.push({
-    type: 'error',
-    line: getLineNumber(),
-    content,
-  });
+  logs.push({ type: 'error', content });
+  originalConsoleError('[User Code Error]', content);
 };
 
 console.warn = (...args: any[]) => {
+  if (logs.length >= MAX_LOGS + 1) return;
+
   const content = args.map(arg => String(arg)).join(' ');
-  logCache.push({
-    type: 'warn',
-    line: getLineNumber(),
-    content,
-  });
+  logs.push({ type: 'warn', content });
+  originalConsoleWarn('[User Code Warn]', content);
 };
 
+// Polyfill DOM APIs
+(self as any).alert = (message: any) => {
+  console.log(`[alert] ${String(message)}`);
+};
+
+(self as any).confirm = (message: any) => {
+  console.log(`[confirm] ${String(message)} (returned true)`);
+  return true;
+};
+
+(self as any).prompt = (message: any, defaultValue?: any) => {
+  const value = defaultValue || '';
+  console.log(`[prompt] ${String(message)} (returned "${value}")`);
+  return value;
+};
+
+// Track timers
+(self as any).setTimeout = (callback: any, delay?: number, ...args: any[]) => {
+  const wrappedCallback = () => {
+    try {
+      callback(...args);
+    } finally {
+      pendingTimers.delete(id);
+      originalConsoleLog('[WORKER] Timer completed, pending:', pendingTimers.size);
+    }
+  };
+  const id = originalSetTimeout(wrappedCallback, delay || 0);
+  pendingTimers.add(id);
+  originalConsoleLog('[WORKER] Timer added, pending:', pendingTimers.size);
+  return id;
+};
+
+(self as any).setInterval = (callback: any, delay?: number, ...args: any[]) => {
+  const id = originalSetInterval(callback, delay || 0, ...args);
+  pendingTimers.add(id);
+  originalConsoleLog('[WORKER] Interval added, pending:', pendingTimers.size);
+  return id;
+};
+
+(self as any).clearTimeout = (id: number) => {
+  originalClearTimeout(id);
+  pendingTimers.delete(id);
+  originalConsoleLog('[WORKER] Timer cleared, pending:', pendingTimers.size);
+};
+
+(self as any).clearInterval = (id: number) => {
+  originalClearInterval(id);
+  pendingTimers.delete(id);
+  originalConsoleLog('[WORKER] Interval cleared, pending:', pendingTimers.size);
+};
+
+originalConsoleLog('[WORKER] Code executor worker loaded');
+
 self.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
+  originalConsoleLog('[WORKER] Received message:', event.data.type);
+
   const message = event.data;
 
   if (message.type === 'terminate') {
-    if (executionTimeout) {
-      clearTimeout(executionTimeout);
-    }
+    originalConsoleLog('[WORKER] Terminating');
     self.close();
     return;
   }
 
   if (message.type === 'execute') {
-    logCache.length = 0;
+    logs = [];
+    pendingTimers.clear();
+    originalConsoleLog('[WORKER] Executing code...');
 
-    executionTimeout = setTimeout(() => {
-      logCache.push({
-        type: 'error',
-        line: 0,
-        content: 'Execution timeout',
+    const sendResults = () => {
+      originalConsoleLog('[WORKER] Sending results, logs:', logs.length);
+      self.postMessage({
+        type: 'complete',
+        logs: logs
       });
-      self.postMessage({ type: 'complete', logs: logCache });
-    }, message.timeout) as unknown as number;
+    };
+
+    // Safety timeout
+    const safetyTimeout = originalSetTimeout(() => {
+      originalConsoleLog('[WORKER] Safety timeout reached');
+      pendingTimers.forEach(id => {
+        originalClearTimeout(id);
+        originalClearInterval(id);
+      });
+      pendingTimers.clear();
+      sendResults();
+    }, message.timeout);
 
     try {
       const fn = new Function(message.code);
       fn();
+      originalConsoleLog('[WORKER] Code executed, pending timers:', pendingTimers.size);
+
+      if (pendingTimers.size === 0) {
+        // No async operations, send immediately
+        originalClearTimeout(safetyTimeout);
+        sendResults();
+      } else {
+        // Wait for timers to complete
+        const checkInterval = originalSetInterval(() => {
+          originalConsoleLog('[WORKER] Checking timers, pending:', pendingTimers.size);
+          if (pendingTimers.size === 0) {
+            originalClearInterval(checkInterval);
+            originalClearTimeout(safetyTimeout);
+            sendResults();
+          }
+        }, 50);
+      }
     } catch (error: any) {
-      logCache.push({
+      originalConsoleError('[WORKER] Execution error:', error);
+      originalClearTimeout(safetyTimeout);
+      logs.push({
         type: 'error',
-        line: 0,
         content: error.message || String(error),
       });
-    } finally {
-      if (executionTimeout) {
-        clearTimeout(executionTimeout);
-      }
+      sendResults();
     }
-
-    self.postMessage({ type: 'complete', logs: logCache });
   }
 });
 
