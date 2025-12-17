@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.jspad.app",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "~/.bun/bin/bun run dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "~/.bun/bin/bun run build",
     "frontendDist": "../dist"
   },
   "app": {
