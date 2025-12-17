@@ -1,34 +1,24 @@
-# dependencies (bun install)
-node_modules
+# Dependencies
+node_modules/
+bun.lockb
 
-# output
-out
-dist
-*.tgz
+# Build outputs
+dist/
+dist-ssr/
 
-# code coverage
-coverage
-*.lcov
+# Tauri
+src-tauri/target/
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# caches
-.eslintcache
-.cache
-*.tsbuildinfo
-
-# IntelliJ based IDEs
-.idea
-
-# Finder (MacOS) folder config
+# OS
 .DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
