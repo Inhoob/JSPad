@@ -3,6 +3,7 @@ import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import { EditorState } from '@codemirror/state';
+import { autocompletion } from '@codemirror/autocomplete';
 
 interface EditorPanelProps {
   code: string;
@@ -45,6 +46,10 @@ export function EditorPanel({ code, onChange, onScroll }: EditorPanelProps) {
         basicSetup,
         javascript(),
         vscodeDark,
+        autocompletion({
+          activateOnTyping: true,
+          override: [],
+        }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChangeRef.current(update.state.doc.toString());

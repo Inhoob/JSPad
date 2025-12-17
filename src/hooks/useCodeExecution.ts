@@ -4,6 +4,7 @@ import type { ConsoleMessage } from '../types';
 interface UseCodeExecutionOptions {
   code: string;
   autoExecute: boolean;
+  autoExecuteDelay: number;
   timeout: number;
   onOutput: (output: ConsoleMessage[]) => void;
 }
@@ -11,6 +12,7 @@ interface UseCodeExecutionOptions {
 export function useCodeExecution({
   code,
   autoExecute,
+  autoExecuteDelay,
   timeout,
   onOutput,
 }: UseCodeExecutionOptions) {
@@ -61,14 +63,14 @@ export function useCodeExecution({
 
     timeoutRef.current = setTimeout(() => {
       executeCode();
-    }, 500);
+    }, autoExecuteDelay);
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [code, autoExecute, executeCode]);
+  }, [code, autoExecute, autoExecuteDelay, executeCode]);
 
   useEffect(() => {
     return () => {

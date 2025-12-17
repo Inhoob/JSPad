@@ -37,6 +37,7 @@ function App() {
   const { executeCode } = useCodeExecution({
     code: activeTab?.code || '',
     autoExecute: settings.autoExecute,
+    autoExecuteDelay: settings.autoExecuteDelay,
     timeout: settings.executionTimeout,
     onOutput: handleConsoleOutput,
   });
@@ -51,11 +52,7 @@ function App() {
 
   const handleTabClose = useCallback(
     (tabId: string) => {
-      const result = closeTab(tabId);
-      if (result === 'quit-app') {
-        // In Tauri, we would call the quit command here
-        window.close();
-      }
+      closeTab(tabId);
     },
     [closeTab]
   );
@@ -68,10 +65,19 @@ function App() {
           createTab();
         } else if (e.key === 'w') {
           e.preventDefault();
-          handleTabClose(activeTabId);
+          // Don't close if it's the last tab
+          if (tabs.length > 1) {
+            handleTabClose(activeTabId);
+          }
         } else if (e.key === ',') {
           e.preventDefault();
           setIsSettingsOpen(true);
+        } else if (e.key === 'r') {
+          e.preventDefault();
+          executeCode();
+        } else if (e.key === 's') {
+          e.preventDefault();
+          executeCode();
         } else if (e.key === 'Enter' && !settings.autoExecute) {
           e.preventDefault();
           executeCode();

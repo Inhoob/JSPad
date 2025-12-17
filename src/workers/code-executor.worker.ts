@@ -41,6 +41,28 @@ console.log = (...args: any[]) => {
   }
 
   const content = args.map(arg => {
+    // Check if it's a Promise
+    if (arg && typeof arg === 'object' && typeof arg.then === 'function') {
+      // It's a Promise, track its state
+      const promiseId = Math.random().toString(36).substring(7);
+      const initialContent = `Promise { <pending> }`;
+
+      // Track the promise resolution
+      arg.then(
+        (value: any) => {
+          const resolvedContent = typeof value === 'object'
+            ? JSON.stringify(value, null, 2)
+            : String(value);
+          console.log(`Promise resolved: ${resolvedContent}`);
+        },
+        (error: any) => {
+          console.error(`Promise rejected: ${String(error)}`);
+        }
+      );
+
+      return initialContent;
+    }
+
     if (typeof arg === 'object') {
       try {
         return JSON.stringify(arg, null, 2);
@@ -159,35 +181,44 @@ self.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
       sendResults();
     }, message.timeout);
 
-    try {
-      const fn = new Function(message.code);
-      fn();
-      originalConsoleLog('[WORKER] Code executed, pending timers:', pendingTimers.size);
+    const executeAsync = async () => {
+      try {
+        // Execute code as async function to support await and fetch
+        const fn = new Function(`return (async () => { ${message.code} })();`);
+        await fn();
 
-      if (pendingTimers.size === 0) {
-        // No async operations, send immediately
+        originalConsoleLog('[WORKER] Code executed, pending timers:', pendingTimers.size);
+
+        // Wait a bit for any remaining async operations
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+
+        if (pendingTimers.size === 0) {
+          // No async operations, send immediately
+          originalClearTimeout(safetyTimeout);
+          sendResults();
+        } else {
+          // Wait for timers to complete
+          const checkInterval = originalSetInterval(() => {
+            originalConsoleLog('[WORKER] Checking timers, pending:', pendingTimers.size);
+            if (pendingTimers.size === 0) {
+              originalClearInterval(checkInterval);
+              originalClearTimeout(safetyTimeout);
+              sendResults();
+            }
+          }, 50);
+        }
+      } catch (error: any) {
+        originalConsoleError('[WORKER] Execution error:', error);
         originalClearTimeout(safetyTimeout);
+        logs.push({
+          type: 'error',
+          content: error.message || String(error),
+        });
         sendResults();
-      } else {
-        // Wait for timers to complete
-        const checkInterval = originalSetInterval(() => {
-          originalConsoleLog('[WORKER] Checking timers, pending:', pendingTimers.size);
-          if (pendingTimers.size === 0) {
-            originalClearInterval(checkInterval);
-            originalClearTimeout(safetyTimeout);
-            sendResults();
-          }
-        }, 50);
       }
-    } catch (error: any) {
-      originalConsoleError('[WORKER] Execution error:', error);
-      originalClearTimeout(safetyTimeout);
-      logs.push({
-        type: 'error',
-        content: error.message || String(error),
-      });
-      sendResults();
-    }
+    };
+
+    executeAsync();
   }
 });
 

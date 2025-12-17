@@ -40,12 +40,9 @@ export function useTabs() {
   }, [setTabs, setActiveTabId]);
 
   const closeTab = useCallback((tabId: string) => {
-    let result: 'quit-app' | 'closed' = 'closed';
-
     setTabs((currentTabs) => {
       if (currentTabs.length === 1) {
-        // Quit app logic handled by parent
-        result = 'quit-app';
+        // Don't close the last tab
         return currentTabs;
       }
 
@@ -59,8 +56,6 @@ export function useTabs() {
 
       return newTabs;
     });
-
-    return result;
   }, [activeTabId, setTabs, setActiveTabId]);
 
   const updateTabName = useCallback((tabId: string, name: string) => {

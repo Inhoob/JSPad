@@ -121,7 +121,7 @@ export function TabBar({
         <button
           onClick={onRun}
           className="h-8 px-3 rounded flex items-center justify-center text-sm bg-blue-600 hover:bg-blue-700 text-white ml-auto mr-1"
-          title="Run code (Cmd+Enter)"
+          title="Run code (Cmd+R)"
         >
           ▶ Run
         </button>

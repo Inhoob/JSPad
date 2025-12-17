@@ -3,6 +3,7 @@ import type { Settings } from '../types';
 
 const DEFAULT_SETTINGS: Settings = {
   autoExecute: true,
+  autoExecuteDelay: 500,
   executionTimeout: 5000,
   splitRatio: 60,
 };

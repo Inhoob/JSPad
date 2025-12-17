@@ -13,6 +13,7 @@ export interface ConsoleMessage {
 
 export interface Settings {
   autoExecute: boolean;
+  autoExecuteDelay: number; // milliseconds: 500, 1000, 1500, 2000
   executionTimeout: number;
   splitRatio: number;
 }
