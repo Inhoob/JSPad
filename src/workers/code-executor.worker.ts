@@ -44,7 +44,6 @@ console.log = (...args: any[]) => {
     // Check if it's a Promise
     if (arg && typeof arg === 'object' && typeof arg.then === 'function') {
       // It's a Promise, track its state
-      const promiseId = Math.random().toString(36).substring(7);
       const initialContent = `Promise { <pending> }`;
 
       // Track the promise resolution

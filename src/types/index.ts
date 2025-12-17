@@ -6,7 +6,7 @@ export interface Tab {
 }
 
 export interface ConsoleMessage {
-  line: number;
+  line?: number;
   type: 'log' | 'error' | 'warn';
   content: any;
 }
