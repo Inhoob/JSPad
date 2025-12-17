@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { nanoid } from 'nanoid';
 import { useLocalStorage } from './useLocalStorage';
 import type { Tab } from '../types';

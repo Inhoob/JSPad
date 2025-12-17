@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Tab } from '../types';
 
 interface TabBarProps {
@@ -20,7 +20,6 @@ export function TabBar({
   onTabClose,
   onTabCreate,
   onTabRename,
-  onTabReorder,
 }: TabBarProps) {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -56,7 +55,7 @@ export function TabBar({
 
   return (
     <div className="h-10 bg-dark-bg border-b border-dark-border flex items-center px-2 gap-1">
-      {tabs.map((tab, index) => (
+      {tabs.map((tab) => (
         <div
           key={tab.id}
           className={`

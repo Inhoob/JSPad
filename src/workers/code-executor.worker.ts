@@ -20,9 +20,6 @@ const logCache: OutputMessage[] = [];
 let executionTimeout: number | null = null;
 
 // Override console methods
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
 
 function getLineNumber(): number {
   try {
