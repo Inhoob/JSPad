@@ -48,7 +48,6 @@ export function EditorPanel({ code, onChange, onScroll }: EditorPanelProps) {
         vscodeDark,
         autocompletion({
           activateOnTyping: true,
-          override: [],
         }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
